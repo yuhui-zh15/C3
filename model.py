@@ -98,7 +98,7 @@ class ClipCap(nn.Module):
     def forward(self, input_embs: torch.Tensor, texts: List[str]):
         output_prefix = self.proj(input_embs)
         output_ids = self.tokenizer_decoder(
-            texts, padding=True, return_tensors="pt"
+            texts, padding=True, return_tensors="pt", truncation=True, max_length=64
         ).to(device)
         output_embs = self.decoder.transformer.wte(output_ids["input_ids"])
 
@@ -154,7 +154,7 @@ class ClipCap(nn.Module):
             self.tokenizer_decoder,
             embed=decoder_input_embs,
             beam_size=1,
-            entry_length=30,
+            entry_length=64,
             stop_token="<|endoftext|>",
         )[0]
 
