@@ -1,4 +1,4 @@
-# Adapted from https://github.com/rmokady/CLIP_prefix_caption/blob/main/predict.py
+# Code adapted from https://github.com/rmokady/CLIP_prefix_caption/blob/main/predict.py
 
 import torch
 import torch.nn.functional as nnf

@@ -1,3 +1,5 @@
+# Code adapted from https://github.com/rmokady/CLIP_prefix_caption/blob/main/train.py
+
 import torch
 import os
 import pickle
