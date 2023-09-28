@@ -1,0 +1,30 @@
+name: lafite
+channels:
+  - defaults
+dependencies:
+- python>=3.8
+- pip>=21
+- scikit-image=0.18.1
+- pip:
+   - matplotlib==3.6.2
+   - transformers
+   - ftfy
+   - regex
+   - tqdm
+   - git+https://github.com/openai/CLIP.git
+   - omegaconf==2.1.1
+   - pytorch_lightning
+   - wandb
+   - numpy
+   - pandas
+   - scikit-learn
+   - torch
+   - torchvision
+   - click 
+   - requests 
+   - pyspng 
+   - ninja 
+   - imageio-ffmpeg==0.4.3
+   - gdown
+   - torchmetrics[image]
+prefix: ./miniconda3/envs/lafite

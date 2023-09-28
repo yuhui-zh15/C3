@@ -1,0 +1,25 @@
+name: clip_prefix_caption
+channels:
+  - defaults
+dependencies:
+- python>=3.8
+- pip>=21
+- scikit-image=0.18.1
+- pip:
+   - transformers
+   - ftfy
+   - regex
+   - tqdm
+   - git+https://github.com/openai/CLIP.git
+   - omegaconf==2.1.1
+   - pytorch_lightning
+   - requests
+   - timm
+   - git+https://github.com/flauted/coco-caption.git@python23
+   - wandb
+   - numpy
+   - pandas
+   - scikit-learn
+   - evaluate
+   - rouge_score
+prefix: ./miniconda3/envs/clip_prefix_caption

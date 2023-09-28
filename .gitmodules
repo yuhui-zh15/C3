@@ -1,0 +1,3 @@
+[submodule "image_captioning/src/parse_data/ImageBind"]
+	path = image_captioning/src/parse_data/ImageBind
+	url = git@github.com:facebookresearch/ImageBind.git

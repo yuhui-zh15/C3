@@ -1,0 +1,3 @@
+[submodule "src/parse_data/ImageBind"]
+	path = src/parse_data/ImageBind
+	url = https://github.com/facebookresearch/ImageBind.git

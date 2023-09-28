@@ -1,0 +1,59 @@
+experiment_name: 'coco_stage2_image_captioning_from_unimodal'
+
+lightning:
+  trainer:
+    devices: -1
+    max_epochs: 10
+    lr: 2e-5
+    precision: 16
+    auto_lr_find: false
+  checkpoint_callback:
+    monitor: 'val/rougeL'
+    dirpath: './data/coco/ckpt'
+    save_last: true
+    mode: 'max'
+    save_top_k: 1
+  logger:
+    logger_type: 'WandbLogger'
+    save_dir: './data/logger/'
+    name: 'clip_prefix_cap_coco'
+    project: 'clip_prefix_cap_coco'
+
+encoder:
+    clip_model_type: 'ViT-B/32'
+    modality: 'vision' # 'language', 'both'
+    embed_dim: 512
+
+
+decoder:
+    modality: 'language'
+    model: 'gpt2'
+
+model: 
+  num_layers: 8
+  mapping_type: 'mlp'
+  prefix_length: 10
+  clip_size: 10
+  normalize_prefix: True
+  is_rn: False
+  gpt2_type: 'gpt2'
+  
+
+data: 
+  dataset: 'coco'
+  seed: 1234
+  train_split: 'train'
+  train_data_path: './data/coco/oscar_split_ViT-B_32_train.pkl'
+  val_data_path: './data/coco/oscar_split_ViT-B_32_val.pkl'
+  test_data_path: './data/coco/oscar_split_ViT-B_32_test.pkl'
+    
+train: 
+  batch_size: 40
+  num_workers: 8
+  loss_fn: 
+    name: 'ce_caption_loss'
+  optimizer: 
+    name: 'AdamW'
+  scheduler:
+    name: 'linear_schedule_with_warmup'
+    warmup_steps: 5000
