@@ -3,7 +3,7 @@ experiment_name: 'coco_stage1_unimodal_text_reconstruction'
 lightning:
   trainer:
     devices: -1
-    max_epochs: 20
+    max_epochs: 10
     lr: 1e-3
     precision: 16
   checkpoint_callback:
