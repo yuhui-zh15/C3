@@ -9,6 +9,5 @@ This repo provides the PyTorch source code of our paper:
 
 ## Approach
 
-![](.figures/figure1.png) 
-![](.figures/figure2.png)
+![](./figures/figure1.png) ![](./figures/figure2.png)
 **Figure: Overview of the motivation behind our approach, $C^3$, that enhances the interchangeable use of embeddings from different modalities.** Our work describes and provides a theoretical explanation of the unique geometry that arises from multi-modal contrastive learning where a modality gap and alignment noise exists in the learned representation space Building upon this observation, we present a straightforward technique, $C^3$, which enhances the interchangeability of embeddings between modalities, enabling the creation of cross-modal applications using only uni-modal data. 
