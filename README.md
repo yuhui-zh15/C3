@@ -1,7 +1,7 @@
 # Connect, Collapse, Corrupt: Learning Cross-Modal Tasks with Uni-Modal Data
 
 This repo provides the PyTorch source code of our paper: 
-[Connect, Collapse, Corrupt: Learning Cross-Modal Tasks with Uni-Modal Data](https://openreview.net/forum?id=ttXg3SKAg5)
+[Connect, Collapse, Corrupt: Learning Cross-Modal Tasks with Uni-Modal Data](https://openreview.net/forum?id=ttXg3SKAg5) (ICLR 2024). Check out project page [here](https://yuhui-zh15.github.io/C3-Website/)!
 
 ## Abstract
 
