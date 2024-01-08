@@ -1,4 +1,4 @@
-name: clip_prefix_caption
+name: capdec
 channels:
   - defaults
 dependencies:
@@ -22,4 +22,4 @@ dependencies:
    - scikit-learn
    - evaluate
    - rouge_score
-prefix: ./miniconda3/envs/clip_prefix_caption
+prefix: ./miniconda3/envs/capdec
