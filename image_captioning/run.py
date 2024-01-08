@@ -88,8 +88,6 @@ def parse_configs():
 
     parser.add_argument("--subsample_val_test", action="store_true")
 
-    # parser = Trainer.add_argparse_args(parser)
-
     args, unknown = parser.parse_known_args()
     cli = [u.strip("--") for u in unknown]  # remove strings leading to flag
 
@@ -101,7 +99,7 @@ def parse_configs():
 
     args.gpus = torch.cuda.device_count()
     if args.gpus is not None:
-        cfg.lightning.trainer.gpus = str(args.gpus)
+        cfg.lightning.trainer.devices = str(args.gpus)
 
     cfg.val_eval = args.val_eval
     cfg.cross_modal_val = args.cross_modal_val
@@ -246,7 +244,7 @@ def setup(cfg, test_split=False):
 
     # setup pytorch-lightning trainer
     lr = cfg.lightning.trainer.pop('lr')
-    cfg.lightning.trainer.pop('gpus')
+    # trainer_args = argparse.Namespace(**cfg.lightning.trainer)
     trainer = Trainer(
         **cfg.lightning.trainer, deterministic=False, callbacks=callbacks, logger=loggers
     )  # note: determinstic is set to True in eval/predict.py with warn_only=True

@@ -37,7 +37,7 @@ def get_metrics_out_filename(output_dir, split, epoch=None):
 
 def add_predictions_to_results_json(predictions, filepath):
     
-    parent_dir = os.path.pardir(filepath)
+    parent_dir = os.path.split(filepath)[0]
     os.makedirs(parent_dir, exist_ok=True)
     all_preds = []
     all_preds.extend(predictions)

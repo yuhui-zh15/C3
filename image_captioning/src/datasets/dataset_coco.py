@@ -11,8 +11,6 @@ import pytorch_lightning as pl
 from transformers import AutoTokenizer
 from omegaconf import OmegaConf
 
-from ..enums import Modality
-
 class ClipCocoDataset(pl.LightningDataModule):
 
     def __init__(self, cfg, split='train'):
@@ -29,8 +27,7 @@ class ClipCocoDataset(pl.LightningDataModule):
         
         data_path = self.get_data_path(cfg, split)
         
-        self.tokenizer = AutoTokenizer.from_pretrained(cfg.decoder.model) 
-        # self.tokenizer.pad_token = self.tokenizer.eos_token
+        self.tokenizer = AutoTokenizer.from_pretrained(cfg.decoder.model)
 
         self.prefix_length = cfg.model.prefix_length
         self.normalize_prefix = cfg.model.normalize_prefix
@@ -92,14 +89,6 @@ class ClipCocoDataset(pl.LightningDataModule):
         else:
             self.condition = self.split == "test"
         
-        if self.condition:
-            if self.output_modality == Modality.Vision:
-                self.input_modality = Modality.Language
-            else:
-                self.input_modality = Modality.Vision
-        else:
-            self.input_modality = self.cfg.encoder.modality
-        
         # Get all caption and image ids
         self.img_ids = sorted(list(self.images.keys()))
         random.shuffle(self.img_ids)
@@ -135,17 +124,13 @@ class ClipCocoDataset(pl.LightningDataModule):
             data_path = cfg.data.val_data_path
         elif split == 'test':
             data_path = cfg.data.test_data_path
-        elif split == 'restval':
-            data_path = cfg.data.restval_data_path
-        elif split == 'train+restval':
-            data_path = cfg.data.train_restval_data_path
         else:
             raise NotImplementedError(f"split {split} invalid")
             
         return data_path
     
     def __len__(self) -> int:
-        if (self.condition and self.output_modality == Modality.Language):
+        if self.condition:
             # Image captioning testing
             return len(self.img_ids)
         else:
@@ -173,7 +158,7 @@ class ClipCocoDataset(pl.LightningDataModule):
     def __getitem__(self, item: int) -> Tuple[torch.Tensor, ...]:
         # For testing, assume cross-modal
         
-        if (self.condition and self.output_modality == Modality.Language):
+        if self.condition:
             return self.get_item_per_image(item)
         
         item = self.cap_ids[item]
