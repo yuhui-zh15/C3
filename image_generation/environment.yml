@@ -18,7 +18,7 @@ dependencies:
    - numpy
    - pandas
    - scikit-learn
-   - torch
+   - torch==1.13.1
    - torchvision
    - click 
    - requests 
