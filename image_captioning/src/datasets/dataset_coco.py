@@ -11,6 +11,8 @@ import pytorch_lightning as pl
 from transformers import AutoTokenizer
 from omegaconf import OmegaConf
 
+os.environ['TOKENIZERS_PARALLELISM']='false'
+
 class ClipCocoDataset(pl.LightningDataModule):
 
     def __init__(self, cfg, split='train'):
@@ -26,8 +28,6 @@ class ClipCocoDataset(pl.LightningDataModule):
         self.add_gaussian_noise = self.cfg.data.add_gaussian_noise
         
         data_path = self.get_data_path(cfg, split)
-        
-        self.tokenizer = AutoTokenizer.from_pretrained(cfg.decoder.model)
 
         self.prefix_length = cfg.model.prefix_length
         self.normalize_prefix = cfg.model.normalize_prefix
@@ -53,6 +53,7 @@ class ClipCocoDataset(pl.LightningDataModule):
             with open(f"{data_path[:-4]}_tokens.pkl", 'rb') as f:
                 self.captions_tokens, self.caption_id_2_image_id, self.image_id_2_caption_ids, all_len = pickle.load(f)
         else:
+            self.tokenizer = AutoTokenizer.from_pretrained(cfg.decoder.model)
             # {caption_id: image_id}
             print("=> Saving caption_id_2_image_id dict")
             self.caption_id_2_image_id = {sentid: self.captions[sentid]["img_id"] for sentid in self.captions}

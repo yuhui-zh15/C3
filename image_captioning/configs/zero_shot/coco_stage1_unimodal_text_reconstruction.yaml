@@ -4,7 +4,7 @@ lightning:
   trainer:
     devices: -1
     max_epochs: 10
-    lr: 1e-3
+    lr: 2e-5
     precision: 16
   checkpoint_callback:
     monitor: 'val/meteor'
@@ -19,14 +19,14 @@ lightning:
     project: 'c3'
 
 encoder:
-  modality: 'language' # 'language', 'both'
-  embed_dim: 512
-  clip_model_type: 'ViT-B/32'
+    modality: 'vision'
+    embed_dim: 512
+    clip_model_type: 'ViT-B/32'
 
 decoder:
-  # Decode to language
-  modality: 'language'
-  model: 'gpt2'
+    # Decode to language
+    modality: 'language'
+    model: 'gpt2'
 
 model: 
   mapping_type: 'mlp'
@@ -45,10 +45,12 @@ data:
   image_embed_mean_path: './data/coco/normalized_image_embed_mean.pkl'
     
 train: 
-  batch_size: 64
+  batch_size: 40
   num_workers: 8
   loss_fn: 
     name: 'ce_caption_loss'
   optimizer: 
     name: 'AdamW'
-
+  scheduler:
+    name: 'linear_schedule_with_warmup'
+    warmup_steps: 5000

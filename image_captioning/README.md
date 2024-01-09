@@ -7,22 +7,25 @@ The code for image captioning using C3 is adapted from [CapDec](https://github.c
 conda env create -f environment.yml
 ```
 
+Note: if using Imagebind, follow the [official repo](https://github.com/facebookresearch/ImageBind) to create a separate imagebind conda environment.
+
 2. Preprocess COCO labels
 ```
-cd src/parse_data/
-python3 create_labels_json.py
+python3 src/parse_data/create_labels_json.py
 ```
 
 3. Embed COCO dataset with CLIP and compute modality means
 ```
-python3 parse_coco.py
-python3 compute_embed_means.py
+python3 src/parse_data/parse_coco.py
+python3 src/parse_data/compute_embed_means.py
 ```
 
 4. (Optional) Embed COCO dataset with ImageBind and compute modality means
 ```
-python3 parse_coco_imagebind.py
-python3 compute_embed_means_imagebind.py
+conda activate imagebind
+python3 src/parse_data/parse_coco_imagebind.py
+python3 src/parse_data/compute_embed_means_imagebind.py
+conda deactivate imagebind
 ```
 
 ## Training

@@ -2,18 +2,24 @@
 Code adapted from: https://github.com/rmokady/CLIP_prefix_caption/blob/main/parse_coco.py
 """
 
+import os
 import torch
 import pickle
 import json
 from tqdm import tqdm
 
-import sys
-sys.path.append('./src/parse_data/Imagebind')
-sys.path.append('./src/parse_data')
-
 from imagebind import data
 from imagebind.models import imagebind_model
 from imagebind.models.imagebind_model import ModalityType
+
+from imagebind.models.multimodal_preprocessors import SimpleTokenizer
+tokenizer = SimpleTokenizer(bpe_path=os.getcwd() + "/src/parse_data/ImageBind/bpe/bpe_simple_vocab_16e6.txt.gz")
+def load_and_transform_text(text, device):
+    if text is None:
+        return None
+    tokens = [tokenizer(t).unsqueeze(0).to(device) for t in text]
+    tokens = torch.cat(tokens, dim=0)
+    return tokens
 
 from create_labels_json import DATA_ROOT, MASTER_JSON
 
