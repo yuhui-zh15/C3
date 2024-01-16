@@ -10,8 +10,8 @@ Building cross-modal applications is challenging due to limited paired multi-mod
 ## 💡 Approach
 
 <p float="left">
-  <img src="./figures/figure1.png" width="40%" />
-  <img src="./figures/figure2.png" width="40%" /> 
+  <img src="./figures/figure1.png" width="57%" />
+  <img src="./figures/figure2.png" width="39%" /> 
 </p>
 
 **Figure: Overview of the motivation behind our approach, $C^3$.** Our work provides a theoretical explanation of the unique geometry that arises from multi-modal contrastive learning, where a modality gap and alignment noise exist in the learned representation space. Building upon this observation, we present a straightforward technique, $C^3$, which enhances the interchangeability of embeddings between modalities, enabling the creation of cross-modal applications using only uni-modal data.
