@@ -1,6 +1,15 @@
 # Image Generation
 The code for image generation using C3 is minimally adapted from [Lafite](https://github.com/drboog/Lafite). Wandb was integrated for logging. 
 
+## Environment
+Please refer to the instructions to set up the environment from the [Lafite official repo](https://github.com/drboog/Lafite?tab=readme-ov-file#requirements).
+
+## Preparing Datasets
+Please refer to the instructions to prepare MSCOCO from the [Lafite official repo](https://github.com/drboog/Lafite?tab=readme-ov-file#preparing-datasets). We directly use their preprocessed [training](https://drive.google.com/file/d/1b82BCh65XxwR-TiA8zu__wwiEHLCgrw2/view?usp=sharing) and [validation](https://drive.google.com/file/d/1b82BCh65XxwR-TiA8zu__wwiEHLCgrw2/view?usp=sharing) sets.
+
+## Pre-Trained Model
+For all our experiments, we finetune [Lafite pre-trained on Google CC3M](https://drive.google.com/file/d/17ER7Yl02Y6yCPbyWxK_tGrJ8RKkcieKq/view?usp=sharing).
+
 ## Getting Started
 1. Create conda environment
 ```
