@@ -1,7 +1,12 @@
 # Connect, Collapse, Corrupt: Learning Cross-Modal Tasks with Uni-Modal Data
 
+[![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](https://lbesson.mit-license.org/)
+[![Python](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/release/python-311/)
+[![Pytorch](https://img.shields.io/badge/Pytorch-2.1-red.svg)](https://pytorch.org/get-started/previous-versions/#v21)
+[![Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
+
 This repo provides the PyTorch source code of our paper: 
-[Connect, Collapse, Corrupt: Learning Cross-Modal Tasks with Uni-Modal Data](https://openreview.net/forum?id=ttXg3SKAg5) (ICLR 2024). Check out project page [here](https://yuhui-zh15.github.io/C3-Website/)!
+[Connect, Collapse, Corrupt: Learning Cross-Modal Tasks with Uni-Modal Data](https://arxiv.org/abs/2401.08567) (ICLR 2024). Check out project page [here](https://yuhui-zh15.github.io/C3-Website/)!
 
 ## 🔮 Abstract
 
