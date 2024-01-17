@@ -1,9 +1,8 @@
 import pytorch_lightning as pl
 import torchvision.transforms as transforms
+from torch.utils.data import ConcatDataset, DataLoader
 
-from torch.utils.data import DataLoader, ConcatDataset
-from .. import builder
-from .. import enums
+from .. import builder, enums
 from ..parse_data import splits
 
 
@@ -24,7 +23,7 @@ class DataModule(pl.LightningDataModule):
             drop_last=True,
             shuffle=True,
             batch_size=self.cfg.train.batch_size,
-            num_workers=self.cfg.train.num_workers
+            num_workers=self.cfg.train.num_workers,
         )
 
     def val_dataloader(self):
@@ -36,7 +35,7 @@ class DataModule(pl.LightningDataModule):
             drop_last=False,
             shuffle=False,
             batch_size=bs,
-            num_workers=self.cfg.train.num_workers
+            num_workers=self.cfg.train.num_workers,
         )
 
     def test_dataloader(self):
@@ -49,25 +48,25 @@ class DataModule(pl.LightningDataModule):
             dataset = ConcatDataset([train_dataset, restval_dataset])
         else:
             dataset = self.dataset(self.cfg, split=self.cfg.test_split)
-            
+
         if self.cfg.decoder.modality == enums.Modality.Language:
             batch_size = 1
         else:
             batch_size = self.cfg.train.batch_size
-            
+
         return DataLoader(
             dataset,
             pin_memory=True,
             drop_last=False,
             shuffle=False,
             batch_size=batch_size,
-            num_workers=1
+            num_workers=1,
         )
 
     def all_dataloader(self):
         datasets = [self.dataset(self.cfg, split=split) for split in splits]
         dataset = ConcatDataset(datasets)
-        
+
         dataset = self.dataset(self.cfg, split=self.cfg.test_split)
         return DataLoader(
             dataset,
@@ -75,5 +74,5 @@ class DataModule(pl.LightningDataModule):
             shuffle=False,
             drop_last=False,
             batch_size=self.cfg.train.batch_size,
-            num_workers=self.cfg.train.num_workers
+            num_workers=self.cfg.train.num_workers,
         )

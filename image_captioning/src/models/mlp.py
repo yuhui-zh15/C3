@@ -1,13 +1,14 @@
+from typing import Tuple
+
 import torch
 import torch.nn as nn
-from typing import Tuple
 
 """
 Code adapted from: https://github.com/rmokady/CLIP_prefix_caption/blob/main/train.py
 """
 
-class MLP(nn.Module):
 
+class MLP(nn.Module):
     def __init__(self, sizes: Tuple[int, ...], bias=True, act=nn.Tanh):
         super(MLP, self).__init__()
         layers = []
@@ -16,7 +17,6 @@ class MLP(nn.Module):
             if i < len(sizes) - 2:
                 layers.append(act())
         self.model = nn.Sequential(*layers)
-    
-    
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.model(x)

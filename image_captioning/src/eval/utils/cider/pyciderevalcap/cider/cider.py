@@ -9,9 +9,7 @@
 #
 # Authors: Ramakrishna Vedantam <vrama91@vt.edu> and
 # Tsung-Yi Lin <tl483@cornell.edu>
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 from .cider_scorer import CiderScorer
 
@@ -21,6 +19,7 @@ class Cider:
     Main Class to compute the CIDEr metric
 
     """
+
     def __init__(self, n=4, df="corpus"):
         """
         Initialize the CIDEr scoring function
@@ -46,15 +45,14 @@ class Cider:
         self.cider_scorer.clear()
 
         for res_id in res:
-
-            hypo = res_id['caption']
-            ref = gts[res_id['image_id']]
+            hypo = res_id["caption"]
+            ref = gts[res_id["image_id"]]
 
             # Sanity check.
-            assert(type(hypo) is list)
-            assert(len(hypo) == 1)
-            assert(type(ref) is list)
-            assert(len(ref) > 0)
+            assert type(hypo) is list
+            assert len(hypo) == 1
+            assert type(ref) is list
+            assert len(ref) > 0
             self.cider_scorer += (hypo[0], ref)
 
         (score, scores) = self.cider_scorer.compute_score()

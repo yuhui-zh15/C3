@@ -1,13 +1,15 @@
 import collections
 import json
 import os
-import yaml
-import pandas as pd
-import evaluate
 
-rouge = evaluate.load('rouge')
-bleu = evaluate.load('bleu')
-meteor = evaluate.load('meteor')
+import evaluate
+import pandas as pd
+import yaml
+
+rouge = evaluate.load("rouge")
+bleu = evaluate.load("bleu")
+meteor = evaluate.load("meteor")
+
 
 def flatten(d, parent_key="", sep="."):
     """flatten a nested dictionary"""
@@ -23,28 +25,27 @@ def flatten(d, parent_key="", sep="."):
 
 def get_pred_filename(output_dir, split, epoch=None):
     if epoch:
-        return os.path.join(output_dir, f'{split}_epoch_{epoch}_pred.json')
+        return os.path.join(output_dir, f"{split}_epoch_{epoch}_pred.json")
     else:
-        return os.path.join(output_dir, f'{split}_pred.json')
+        return os.path.join(output_dir, f"{split}_pred.json")
 
 
 def get_metrics_out_filename(output_dir, split, epoch=None):
     if epoch:
-        return os.path.join(output_dir, f'{split}_epoch_{epoch}_metrics.json')
+        return os.path.join(output_dir, f"{split}_epoch_{epoch}_metrics.json")
     else:
-        return os.path.join(output_dir, f'{split}_metrics.json')
+        return os.path.join(output_dir, f"{split}_metrics.json")
 
 
 def add_predictions_to_results_json(predictions, filepath):
-    
     parent_dir = os.path.split(filepath)[0]
     os.makedirs(parent_dir, exist_ok=True)
     all_preds = []
     all_preds.extend(predictions)
 
-    with open(filepath, 'w') as f:
+    with open(filepath, "w") as f:
         json.dump(predictions, f, indent=4)
-        
+
     print(f"=> Predictions at {filepath}")
 
 
@@ -73,9 +74,7 @@ def evaluate_list(gens, refs):
     meteor_score = meteor.compute(predictions=gens, references=refs)
     metrics_dict = {}
     metrics_dict.update(rouge_score)
-    metrics_dict['bleu'] = bleu_score['bleu']
-    metrics_dict['meteor'] = meteor_score['meteor']
+    metrics_dict["bleu"] = bleu_score["bleu"]
+    metrics_dict["meteor"] = meteor_score["meteor"]
 
     return metrics_dict
-    
-        

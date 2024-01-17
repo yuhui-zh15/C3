@@ -5,6 +5,7 @@ import torch.nn.functional as nnf
 
 torch.use_deterministic_algorithms(True, warn_only=True)
 
+
 def generate2(
     model,
     tokenizer,
@@ -23,9 +24,8 @@ def generate2(
     stop_token_index = tokenizer.encode(stop_token)[0]
     filter_value = -float("Inf")
     device = next(model.parameters()).device
-    
-    with torch.no_grad():
 
+    with torch.no_grad():
         for entry_idx in range(entry_count):
             if embed is not None:
                 generated = embed
@@ -37,7 +37,6 @@ def generate2(
                 generated = model.model.transformer.wte(tokens)
 
             for i in range(entry_length):
-
                 outputs = model.model(inputs_embeds=generated)
                 logits = outputs.logits
                 logits = logits[:, -1, :] / (temperature if temperature > 0 else 1.0)
@@ -63,13 +62,13 @@ def generate2(
                 generated = torch.cat((generated, next_token_embed), dim=1)
                 if stop_token_index == next_token.item():
                     break
-            
+
             tokens = tokens.squeeze().cpu().numpy()
-            try: 
+            try:
                 output_list = list(tokens)
             except:
-                output_list = [tokens.item()] # single period
-                
+                output_list = [tokens.item()]  # single period
+
             output_text = tokenizer.decode(output_list)
             generated_list.append(output_text)
 

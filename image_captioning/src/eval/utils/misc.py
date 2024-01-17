@@ -1,18 +1,19 @@
-# Copyright (c) 2020 Microsoft Corporation. Licensed under the MIT license. 
+# Copyright (c) 2020 Microsoft Corporation. Licensed under the MIT license.
 
 import errno
 import os
 import os.path as op
-import yaml
 import random
-import torch
+
 import numpy as np
+import torch
 import torch.distributed as dist
+import yaml
 
 
 def mkdir(path):
     # if it is the current folder, skip.
-    if path == '':
+    if path == "":
         return
     try:
         os.makedirs(path)
@@ -30,7 +31,7 @@ def set_seed(seed, n_gpu):
 
 
 def load_from_yaml_file(yaml_file):
-    with open(yaml_file, 'r') as fp:
+    with open(yaml_file, "r") as fp:
         return yaml.load(fp)
 
 

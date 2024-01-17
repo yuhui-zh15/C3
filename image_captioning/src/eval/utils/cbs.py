@@ -1,15 +1,15 @@
-# Copyright (c) 2021 Microsoft Corporation. Licensed under the MIT license. 
+# Copyright (c) 2021 Microsoft Corporation. Licensed under the MIT license.
 # Copyright (c) 2019, Yufei Wang, Karan Desai. Licensed under the MIT license.
 # Code is modified from https://github.com/nocaps-org/updown-baseline
 
-import anytree
 import base64
 import json
-import numpy as np
 import os.path as op
-import torch
 from typing import Callable, Dict, List, Optional, Tuple
 
+import anytree
+import numpy as np
+import torch
 from oscar.modeling.modeling_utils import BeamHypotheses
 
 StepFunctionType = Callable[
@@ -105,8 +105,15 @@ class ConstrainedBeamSearch(object):
 
         # generated hypotheses
         generated_hyps = [
-            [BeamHypotheses(self.num_keep_best, self.max_steps, self.length_penalty, early_stopping=False)
-            for _ in range(num_fsm_states)]
+            [
+                BeamHypotheses(
+                    self.num_keep_best,
+                    self.max_steps,
+                    self.length_penalty,
+                    early_stopping=False,
+                )
+                for _ in range(num_fsm_states)
+            ]
             for bb in range(batch_size)
         ]
 
@@ -124,13 +131,14 @@ class ConstrainedBeamSearch(object):
         # from the `beam_size` elements of the beam (per FSM state) to `beam_size`^2 candidates
         # from which we will select the top `beam_size` elements for the next iteration.
 
-        curr_ids = (
-            start_predictions.expand(batch_size, self.beam_size*num_fsm_states)
-            .reshape(batch_size*self.beam_size*num_fsm_states, 1)
-        )
+        curr_ids = start_predictions.expand(
+            batch_size, self.beam_size * num_fsm_states
+        ).reshape(batch_size * self.beam_size * num_fsm_states, 1)
         # shape: start_class_log_probabilities (batch_size, vocab_size)
         start_class_logits, state = step(curr_ids, start_state)
-        start_class_log_probabilities = torch.nn.functional.log_softmax(start_class_logits, dim=-1)
+        start_class_log_probabilities = torch.nn.functional.log_softmax(
+            start_class_logits, dim=-1
+        )
         start_class_log_probabilities = start_class_log_probabilities[:batch_size, :]
         vocab_size = start_class_log_probabilities.size(-1)
 
@@ -143,9 +151,10 @@ class ConstrainedBeamSearch(object):
         )
 
         # (batch_size, num_fsm_states, beam_size)
-        start_top_log_probabilities, start_predicted_classes = start_state_predictions.topk(
-            self.beam_size
-        )
+        (
+            start_top_log_probabilities,
+            start_predicted_classes,
+        ) = start_state_predictions.topk(self.beam_size)
         # shape: (batch_size, num_fsm_states, beam_size)
         last_log_probabilities = start_top_log_probabilities
 
@@ -156,10 +165,10 @@ class ConstrainedBeamSearch(object):
         )
         log_probs_after_end[:, self._eos_token_ids] = 0.0
 
-        #state = {
-            #key: _enlarge_single_tensor(value, batch_size, num_fsm_states, self.beam_size)
-            #for (key, value) in state.items()
-        #}
+        # state = {
+        # key: _enlarge_single_tensor(value, batch_size, num_fsm_states, self.beam_size)
+        # for (key, value) in state.items()
+        # }
 
         step_state_mask = fsm.view(
             batch_size, num_fsm_states, num_fsm_states, 1, vocab_size
@@ -171,28 +180,29 @@ class ConstrainedBeamSearch(object):
             last_predictions = predictions[-1].reshape(
                 batch_size * self.beam_size * num_fsm_states
             )
-            cur_finished = (last_predictions==self._eos_token_ids[0])
+            cur_finished = last_predictions == self._eos_token_ids[0]
             for eos_token in self._eos_token_ids[1:]:
-                cur_finished = (cur_finished | (last_predictions==eos_token))
+                cur_finished = cur_finished | (last_predictions == eos_token)
             if cur_finished.all():
                 break
 
             curr_ids = torch.cat([curr_ids, last_predictions.unsqueeze(-1)], dim=1)
 
             class_logits, state = step(curr_ids, state)
-            class_log_probabilities = torch.nn.functional.log_softmax(class_logits, dim=-1)
-            #last_predictions_expanded = (
-                #last_predictions.view(-1)
-                #.unsqueeze(-1)
-                #.expand(batch_size * num_fsm_states * self.beam_size, vocab_size)
-            #)
-            cur_finished_expanded = (
-                cur_finished.unsqueeze(-1)
-                .expand(batch_size * num_fsm_states * self.beam_size, vocab_size)
+            class_log_probabilities = torch.nn.functional.log_softmax(
+                class_logits, dim=-1
+            )
+            # last_predictions_expanded = (
+            # last_predictions.view(-1)
+            # .unsqueeze(-1)
+            # .expand(batch_size * num_fsm_states * self.beam_size, vocab_size)
+            # )
+            cur_finished_expanded = cur_finished.unsqueeze(-1).expand(
+                batch_size * num_fsm_states * self.beam_size, vocab_size
             )
 
             cleaned_log_probabilities = torch.where(
-                #last_predictions_expanded == self._eos_token_ids,
+                # last_predictions_expanded == self._eos_token_ids,
                 cur_finished_expanded,
                 log_probs_after_end,
                 class_log_probabilities,
@@ -214,7 +224,9 @@ class ConstrainedBeamSearch(object):
 
             expanded_last_log_probabilities = last_log_probabilities.view(
                 batch_size, num_fsm_states, self.beam_size, 1
-            ).expand(batch_size, num_fsm_states, self.beam_size, self.per_node_beam_size)
+            ).expand(
+                batch_size, num_fsm_states, self.beam_size, self.per_node_beam_size
+            )
 
             for i in range(num_fsm_states):
                 # shape (batch_size, num_fsm_states, self.beam_size, vocab_size)
@@ -237,25 +249,43 @@ class ConstrainedBeamSearch(object):
 
                 if not self.use_hypo:
                     # shape (batch_size, beam_size)
-                    state_beam_log_probs, state_beam_indices = reshaped_summed.topk(self.beam_size)
+                    state_beam_log_probs, state_beam_indices = reshaped_summed.topk(
+                        self.beam_size
+                    )
                     # shape (batch_size, beam_size)
-                    state_predicted_classes = reshaped_predicted_classes.gather(1, state_beam_indices)
+                    state_predicted_classes = reshaped_predicted_classes.gather(
+                        1, state_beam_indices
+                    )
                 else:
                     # shape (batch_size, beam_size*per_node_beam_size)
-                    candidate_beam_log_probs, candidate_beam_indices = reshaped_summed.topk(
-                            self.beam_size*self.per_node_beam_size, sorted=True, largest=True)
+                    (
+                        candidate_beam_log_probs,
+                        candidate_beam_indices,
+                    ) = reshaped_summed.topk(
+                        self.beam_size * self.per_node_beam_size,
+                        sorted=True,
+                        largest=True,
+                    )
                     # shape (batch_size, beam_size*per_node_beam_size)
-                    candidate_predicted_classes = reshaped_predicted_classes.gather(1, candidate_beam_indices)
+                    candidate_predicted_classes = reshaped_predicted_classes.gather(
+                        1, candidate_beam_indices
+                    )
                     next_batch_beam = []
                     for batch_ex in range(batch_size):
                         next_sent_beam = []
-                        for word_id, beam_id, log_prob in zip(candidate_predicted_classes[batch_ex],
-                                    candidate_beam_indices[batch_ex],
-                                    candidate_beam_log_probs[batch_ex]):
+                        for word_id, beam_id, log_prob in zip(
+                            candidate_predicted_classes[batch_ex],
+                            candidate_beam_indices[batch_ex],
+                            candidate_beam_log_probs[batch_ex],
+                        ):
                             if word_id.item() in self._eos_token_ids:
                                 generated_hyps[batch_ex][i].add(
-                                    curr_ids[batch_ex * self.beam_size*num_fsm_states + beam_id/self.per_node_beam_size, :].clone(),
-                                    log_prob.item()
+                                    curr_ids[
+                                        batch_ex * self.beam_size * num_fsm_states
+                                        + beam_id / self.per_node_beam_size,
+                                        :,
+                                    ].clone(),
+                                    log_prob.item(),
                                 )
                             else:
                                 next_sent_beam.append((word_id, beam_id, log_prob))
@@ -263,24 +293,31 @@ class ConstrainedBeamSearch(object):
                                 break
                         assert len(next_sent_beam) == self.beam_size
                         next_batch_beam.extend(next_sent_beam)
-                    state_predicted_classes = torch.tensor([x[0] for x in next_batch_beam],
-                            device=device).reshape(batch_size, self.beam_size)
-                    state_beam_indices = torch.tensor([x[1] for x in next_batch_beam],
-                            device=device).reshape(batch_size, self.beam_size)
-                    state_beam_log_probs = torch.tensor([x[2] for x in next_batch_beam],
-                            device=device).reshape(batch_size, self.beam_size)
+                    state_predicted_classes = torch.tensor(
+                        [x[0] for x in next_batch_beam], device=device
+                    ).reshape(batch_size, self.beam_size)
+                    state_beam_indices = torch.tensor(
+                        [x[1] for x in next_batch_beam], device=device
+                    ).reshape(batch_size, self.beam_size)
+                    state_beam_log_probs = torch.tensor(
+                        [x[2] for x in next_batch_beam], device=device
+                    ).reshape(batch_size, self.beam_size)
 
                 restricted_predicted_classes[:, i, :] = state_predicted_classes
                 restricted_beam_indices[:, i, :] = state_beam_indices
                 restricted_beam_log_probs[:, i, :] = state_beam_log_probs
 
-            restricted_predicted_classes = restricted_predicted_classes.view(batch_size, -1)
+            restricted_predicted_classes = restricted_predicted_classes.view(
+                batch_size, -1
+            )
             predictions.append(restricted_predicted_classes)
 
             backpointer = restricted_beam_indices // self.per_node_beam_size
             backpointers.append(backpointer.view(batch_size, -1))
 
-            last_log_probabilities = restricted_beam_log_probs.view(batch_size, num_fsm_states, -1)
+            last_log_probabilities = restricted_beam_log_probs.view(
+                batch_size, num_fsm_states, -1
+            )
 
             def track_back_state(state_tensor):
                 _, *last_dims = state_tensor.size()
@@ -291,10 +328,13 @@ class ConstrainedBeamSearch(object):
 
                 # shape: (batch_size * beam_size, *)
                 return (
-                    state_tensor.reshape(batch_size, num_fsm_states * self.beam_size, *last_dims)
+                    state_tensor.reshape(
+                        batch_size, num_fsm_states * self.beam_size, *last_dims
+                    )
                     .gather(1, expanded_backpointer)
                     .reshape(batch_size * num_fsm_states * self.beam_size, *last_dims)
                 )
+
             # reorder states
             if state is not None:
                 state = tuple(track_back_state(value) for value in state)
@@ -327,27 +367,32 @@ class ConstrainedBeamSearch(object):
 
         # shape: (batch_size, beam_size, max_steps)
         all_predictions = torch.cat(list(reversed(reconstructed_predictions)), 2)
-        all_predictions = all_predictions.view(batch_size, num_fsm_states, self.beam_size, -1)
-        assert (all_predictions == curr_ids.reshape(batch_size, num_fsm_states,
-                self.beam_size, -1)[:,:,:,1:]).all()
+        all_predictions = all_predictions.view(
+            batch_size, num_fsm_states, self.beam_size, -1
+        )
+        assert (
+            all_predictions
+            == curr_ids.reshape(batch_size, num_fsm_states, self.beam_size, -1)[
+                :, :, :, 1:
+            ]
+        ).all()
 
         if self.use_hypo:
-            decoded = all_predictions.new(batch_size, num_fsm_states, 1,
-                    self.max_steps).fill_(self._eos_token_ids[0])
-            scores = last_log_probabilities.new(batch_size, num_fsm_states,
-                    1).fill_(-1e5)
+            decoded = all_predictions.new(
+                batch_size, num_fsm_states, 1, self.max_steps
+            ).fill_(self._eos_token_ids[0])
+            scores = last_log_probabilities.new(batch_size, num_fsm_states, 1).fill_(
+                -1e5
+            )
             for batch_ex in range(batch_size):
                 for i in range(num_fsm_states):
                     beam = all_predictions[batch_ex, i, 0, :]
                     log_prob = last_log_probabilities[batch_ex, i, 0]
-                    generated_hyps[batch_ex][i].add(
-                        beam.clone(),
-                        log_prob.item()
-                    )
+                    generated_hyps[batch_ex][i].add(beam.clone(), log_prob.item())
                     hyps = generated_hyps[batch_ex][i].hyp
                     assert len(hyps) == 1
                     score, sent = hyps[0]
-                    decoded[batch_ex, i, 0, :len(sent)] = sent
+                    decoded[batch_ex, i, 0, : len(sent)] = sent
                     scores[batch_ex, i, 0] = score
             all_predictions = decoded
             last_log_probabilities = scores
@@ -356,8 +401,8 @@ class ConstrainedBeamSearch(object):
         pad_len = self.max_steps - all_predictions.shape[-1]
         if pad_len > 0:
             padding_ids = all_predictions.new(
-                    batch_size, num_fsm_states, self.beam_size,
-                    pad_len).fill_(self._eos_token_ids[0])
+                batch_size, num_fsm_states, self.beam_size, pad_len
+            ).fill_(self._eos_token_ids[0])
             all_predictions = torch.cat([all_predictions, padding_ids], dim=-1)
 
         return all_predictions, last_log_probabilities
@@ -421,23 +466,27 @@ def select_best_beam_with_constraints(
         for eos_token_id in eos_token_ids:
             valid_length = valid_length.mul(valid_beams.ne(eos_token_id).long())
         valid_length = valid_length.sum(1) + 1
-        valid_beam_log_probabilities = beam_log_probabilities[i, valid_states, 0] / valid_length
+        valid_beam_log_probabilities = (
+            beam_log_probabilities[i, valid_states, 0] / valid_length
+        )
 
         selected_index = torch.argmax(valid_beam_log_probabilities)
-        best_beams.append(valid_beams[selected_index, :] )
+        best_beams.append(valid_beams[selected_index, :])
         best_beam_log_probabilities.append(valid_beam_log_probabilities[selected_index])
 
     # shape: (batch_size, max_decoding_steps)
-    return (torch.stack(best_beams).long().to(beams.device),
-            torch.stack(best_beam_log_probabilities).to(beams.device))
+    return (
+        torch.stack(best_beams).long().to(beams.device),
+        torch.stack(best_beam_log_probabilities).to(beams.device),
+    )
 
 
 def load_wordforms(wordforms_tsvpath):
     wordforms = {}
     with open(wordforms_tsvpath, "r") as fp:
         for line in fp:
-            parts = line.strip().split('\t')
-            wordforms[parts[0]] = parts[1].split(',')
+            parts = line.strip().split("\t")
+            wordforms[parts[0]] = parts[1].split(",")
     return wordforms
 
 
@@ -446,21 +495,26 @@ class ConstraintBoxesReader(object):
     A reader for annotation files containing detected bounding boxes.
     For our use cases, the detections are from an object detector trained using Open Images.
     """
+
     def __init__(self, boxes_tsvpath):
         self._image_key_to_boxes = {}
-        with open(boxes_tsvpath, 'r') as fp:
+        with open(boxes_tsvpath, "r") as fp:
             for line in fp:
-                parts = line.strip().split('\t')
+                parts = line.strip().split("\t")
                 img_key = parts[0]
                 labels = json.loads(parts[1])
                 boxes, class_names, scores = [], [], []
                 for box in labels:
-                    boxes.append(box['rect'])
-                    class_names.append(box['class'].lower())
-                    scores.append(box['conf'])
+                    boxes.append(box["rect"])
+                    class_names.append(box["class"].lower())
+                    scores.append(box["conf"])
                 boxes = np.array(boxes)
                 scores = np.array(scores)
-                self._image_key_to_boxes[img_key] = {"boxes": boxes, "class_names": class_names, "scores": scores}
+                self._image_key_to_boxes[img_key] = {
+                    "boxes": boxes,
+                    "class_names": class_names,
+                    "scores": scores,
+                }
 
     def __len__(self):
         return len(self._image_key_to_boxes)
@@ -468,8 +522,7 @@ class ConstraintBoxesReader(object):
     def __getitem__(self, image_key):
         # Some images may not have any boxes, handle that case too.
         if image_key not in self._image_key_to_boxes:
-            return {"boxes": np.array([]), "class_names": [], "scores":
-                    np.array([])}
+            return {"boxes": np.array([]), "class_names": [], "scores": np.array([])}
         else:
             return self._image_key_to_boxes[image_key]
 
@@ -523,9 +576,7 @@ class ConstraintFilter(object):
         "luggage and bags": "luggage",
     }
 
-    def __init__(
-        self, hierarchy_jsonpath, nms_threshold, max_given_constraints
-    ):
+    def __init__(self, hierarchy_jsonpath, nms_threshold, max_given_constraints):
         def __read_hierarchy(node, parent=None):
             # Cast an ``anytree.AnyNode`` (after first level of recursion) to dict.
             attributes = dict(node)
@@ -542,8 +593,9 @@ class ConstraintFilter(object):
         self._nms_threshold = nms_threshold
         self._max_given_constraints = max_given_constraints
 
-    def __call__(self, boxes: np.ndarray, class_names: List[str], scores: np.ndarray) -> List[str]:
-
+    def __call__(
+        self, boxes: np.ndarray, class_names: List[str], scores: np.ndarray
+    ) -> List[str]:
         # Remove padding boxes (which have prediction confidence score = 0), and remove boxes
         # corresponding to all blacklisted classes. These will never become CBS constraints.
         keep_indices = []
@@ -563,11 +615,15 @@ class ConstraintFilter(object):
         scores = scores[keep_indices]
 
         # Retain top-k constraints based on prediction confidence score.
-        class_names_and_scores = sorted(list(zip(class_names, scores)), key=lambda t: -t[1])
+        class_names_and_scores = sorted(
+            list(zip(class_names, scores)), key=lambda t: -t[1]
+        )
         class_names_and_scores = class_names_and_scores[: self._max_given_constraints]
 
         # Replace class name according to ``self.REPLACEMENTS``.
-        class_names = [self.REPLACEMENTS.get(t[0], t[0]) for t in class_names_and_scores]
+        class_names = [
+            self.REPLACEMENTS.get(t[0], t[0]) for t in class_names_and_scores
+        ]
 
         # Drop duplicates.
         class_names = list(set(class_names))
@@ -581,7 +637,9 @@ class ConstraintFilter(object):
         # Less height => finer-grained class name => higher score.
         heights = np.array(
             [
-                anytree.search.findall(self._hierarchy, lambda node: node.LabelName.lower() in c)[0].height
+                anytree.search.findall(
+                    self._hierarchy, lambda node: node.LabelName.lower() in c
+                )[0].height
                 for c in class_names
             ]
         )
@@ -611,7 +669,9 @@ class ConstraintFilter(object):
             xx2 = np.minimum(x2[score_order[0]], x2[score_order[1:]])
             yy2 = np.minimum(y2[score_order[0]], y2[score_order[1:]])
 
-            intersection = np.maximum(0.0, xx2 - xx1 + 1) * np.maximum(0.0, yy2 - yy1 + 1)
+            intersection = np.maximum(0.0, xx2 - xx1 + 1) * np.maximum(
+                0.0, yy2 - yy1 + 1
+            )
             union = areas[score_order[0]] + areas[score_order[1:]] - intersection
 
             # Perform NMS for IoU >= 0.85. Check score, boxes corresponding to object
@@ -703,13 +763,13 @@ class FiniteStateMachineBuilder(object):
         constraint2tokens_tsvpath,
         tokenforms_tsvpath,
         max_given_constraints,
-        max_words_per_constraint = 4,
+        max_words_per_constraint=4,
     ):
         self._tokenizer = tokenizer
         self._max_given_constraints = max_given_constraints
         self._max_words_per_constraint = max_words_per_constraint
 
-        self._num_main_states = 2 ** max_given_constraints
+        self._num_main_states = 2**max_given_constraints
         self._num_total_states = self._num_main_states * max_words_per_constraint
 
         self._wordforms: Dict[str, List[str]] = load_wordforms(tokenforms_tsvpath)
@@ -732,7 +792,9 @@ class FiniteStateMachineBuilder(object):
             sub-state. This is later used to trim the unused sub-states from FSM.
         """
         assert len(constraints) <= self._max_given_constraints
-        fsm = torch.zeros(self._num_total_states, self._num_total_states, dtype=torch.uint8)
+        fsm = torch.zeros(
+            self._num_total_states, self._num_total_states, dtype=torch.uint8
+        )
 
         # Self loops for all words on main states.
         fsm[range(self._num_main_states), range(self._num_main_states)] = 1
@@ -741,11 +803,15 @@ class FiniteStateMachineBuilder(object):
 
         substate_idx = self._num_main_states
         for i, constraint in enumerate(constraints):
-            fsm, substate_idx = self._add_nth_constraint(fsm, i + 1, substate_idx, constraint)
+            fsm, substate_idx = self._add_nth_constraint(
+                fsm, i + 1, substate_idx, constraint
+            )
 
         return fsm, substate_idx
 
-    def _add_nth_constraint(self, fsm: torch.Tensor, n: int, substate_idx: int, constraint: str):
+    def _add_nth_constraint(
+        self, fsm: torch.Tensor, n: int, substate_idx: int, constraint: str
+    ):
         r"""
         Given an (incomplete) FSM matrix with transitions for "(n - 1)" constraints added, add
         all transitions for the "n-th" constraint.
@@ -771,14 +837,14 @@ class FiniteStateMachineBuilder(object):
             FSM with added connections for the constraint and updated ``substate_idx`` pointing to
             the next unused sub-state.
         """
-        #words = constraint.split()
+        # words = constraint.split()
         words = []
         for w in constraint.split():
             words.extend(self._constraint2tokens[w])
-        #TODO: set max_words_per_constraint
-        #assert len(words) <= self._max_words_per_constraint
+        # TODO: set max_words_per_constraint
+        # assert len(words) <= self._max_words_per_constraint
         if len(words) > self._max_words_per_constraint:
-            words = words[:self._max_words_per_constraint]
+            words = words[: self._max_words_per_constraint]
         connection_stride = 2 ** (n - 1)
 
         from_state = 0
@@ -805,13 +871,18 @@ class FiniteStateMachineBuilder(object):
         return fsm, substate_idx
 
     def _connect(
-        self, fsm: torch.Tensor, from_state: int, to_state: int, word: str, reset_state: int = None
+        self,
+        fsm: torch.Tensor,
+        from_state: int,
+        to_state: int,
+        word: str,
+        reset_state: int = None,
     ):
         r"""
         Add a connection between two states for a particular word (and all its word-forms). This
         means removing self-loop from ``from_state`` for all word-forms of ``word`` and connecting
         them to ``to_state``.
-        
+
         Extended Summary
         ----------------
         In case of multi-word constraints, we return back to the ``reset_state`` for any utterance
@@ -840,7 +911,7 @@ class FiniteStateMachineBuilder(object):
             FSM with the added connection.
         """
         wordforms = self._wordforms.get(word, [word])
-        #wordform_indices = [self._vocabulary.get_token_index(w) for w in wordforms]
+        # wordform_indices = [self._vocabulary.get_token_index(w) for w in wordforms]
         wordform_indices = self._tokenizer.convert_tokens_to_ids(wordforms)
 
         for wordform_index in wordform_indices:
@@ -854,4 +925,3 @@ class FiniteStateMachineBuilder(object):
                 fsm[from_state, reset_state, wordform_index] = 0
 
         return fsm
-

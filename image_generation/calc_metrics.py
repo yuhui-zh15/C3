@@ -1,44 +1,51 @@
-
 """Calculate quality metrics for previous training run or pretrained network pickle."""
 
-import os
-import click
-import json
-import tempfile
 import copy
-import torch
+import json
+import os
+import tempfile
+
+import click
 import dnnlib
-
 import legacy
-from metrics import metric_main
-from metrics import metric_utils
-from torch_utils import training_stats
-from torch_utils import custom_ops
-from torch_utils import misc
+import torch
+from metrics import metric_main, metric_utils
+from torch_utils import custom_ops, misc, training_stats
 
-#----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
+
 
 def subprocess_fn(rank, args, temp_dir):
     dnnlib.util.Logger(should_flush=True)
 
     # Init torch.distributed.
     if args.num_gpus > 1:
-        init_file = os.path.abspath(os.path.join(temp_dir, '.torch_distributed_init'))
-        if os.name == 'nt':
-            init_method = 'file:///' + init_file.replace('\\', '/')
-            torch.distributed.init_process_group(backend='gloo', init_method=init_method, rank=rank, world_size=args.num_gpus)
+        init_file = os.path.abspath(os.path.join(temp_dir, ".torch_distributed_init"))
+        if os.name == "nt":
+            init_method = "file:///" + init_file.replace("\\", "/")
+            torch.distributed.init_process_group(
+                backend="gloo",
+                init_method=init_method,
+                rank=rank,
+                world_size=args.num_gpus,
+            )
         else:
-            init_method = f'file://{init_file}'
-            torch.distributed.init_process_group(backend='nccl', init_method=init_method, rank=rank, world_size=args.num_gpus)
+            init_method = f"file://{init_file}"
+            torch.distributed.init_process_group(
+                backend="nccl",
+                init_method=init_method,
+                rank=rank,
+                world_size=args.num_gpus,
+            )
 
     # Init torch_utils.
-    sync_device = torch.device('cuda', rank) if args.num_gpus > 1 else None
+    sync_device = torch.device("cuda", rank) if args.num_gpus > 1 else None
     training_stats.init_multiprocessing(rank=rank, sync_device=sync_device)
     if rank != 0 or not args.verbose:
-        custom_ops.verbosity = 'none'
+        custom_ops.verbosity = "none"
 
     # Print network summary.
-    device = torch.device('cuda', rank)
+    device = torch.device("cuda", rank)
     torch.backends.cudnn.benchmark = True
     torch.backends.cuda.matmul.allow_tf32 = False
     torch.backends.cudnn.allow_tf32 = False
@@ -50,52 +57,106 @@ def subprocess_fn(rank, args, temp_dir):
         fts = torch.empty([1, 512], device=device)
         img = misc.print_module_summary(G, [z, c])
         misc.print_module_summary(D, [img, c, fts])
-#         z = torch.empty([1, G.z_dim], device=device)
-#         c = torch.empty([1, G.c_dim], device=device)
-#         misc.print_module_summary(G, [z, c])
+    #         z = torch.empty([1, G.z_dim], device=device)
+    #         c = torch.empty([1, G.c_dim], device=device)
+    #         misc.print_module_summary(G, [z, c])
 
     # Calculate each metric.
     for metric in args.metrics:
         if rank == 0 and args.verbose:
-            print(f'Calculating {metric}...')
+            print(f"Calculating {metric}...")
         progress = metric_utils.ProgressMonitor(verbose=args.verbose)
-        txt_recon=True # add the args later
-        img_recon=False
-        result_dict = metric_main.calc_metric(metric=metric, G=G, D=D, txt_recon=txt_recon, img_recon=img_recon, dataset_kwargs=args.dataset_kwargs, testset_kwargs=args.testset_kwargs,
-            num_gpus=args.num_gpus, rank=rank, device=device, progress=progress)
+        txt_recon = True  # add the args later
+        img_recon = False
+        result_dict = metric_main.calc_metric(
+            metric=metric,
+            G=G,
+            D=D,
+            txt_recon=txt_recon,
+            img_recon=img_recon,
+            dataset_kwargs=args.dataset_kwargs,
+            testset_kwargs=args.testset_kwargs,
+            num_gpus=args.num_gpus,
+            rank=rank,
+            device=device,
+            progress=progress,
+        )
         if rank == 0:
-            metric_main.report_metric(result_dict, run_dir=args.run_dir, snapshot_pkl=args.network_pkl)
+            metric_main.report_metric(
+                result_dict, run_dir=args.run_dir, snapshot_pkl=args.network_pkl
+            )
         if rank == 0 and args.verbose:
             print()
 
     # Done.
     if rank == 0 and args.verbose:
-        print('Exiting...')
+        print("Exiting...")
 
-#----------------------------------------------------------------------------
+
+# ----------------------------------------------------------------------------
+
 
 class CommaSeparatedList(click.ParamType):
-    name = 'list'
+    name = "list"
 
     def convert(self, value, param, ctx):
         _ = param, ctx
-        if value is None or value.lower() == 'none' or value == '':
+        if value is None or value.lower() == "none" or value == "":
             return []
-        return value.split(',')
+        return value.split(",")
 
-#----------------------------------------------------------------------------
+
+# ----------------------------------------------------------------------------
+
 
 @click.command()
 @click.pass_context
-@click.option('network_pkl', '--network', help='Network pickle filename or URL', metavar='PATH', required=True)
-@click.option('--metrics', help='Comma-separated list or "none"', type=CommaSeparatedList(), default='fid50k_full', show_default=True)
-@click.option('--data', help='Dataset to evaluate metrics against (directory or zip) [default: same as training data]', metavar='PATH')
-@click.option('--test_data', help='Dataset to evaluate metrics against (directory or zip) [default: same as training data]', metavar='PATH')
-
-@click.option('--mirror', help='Whether the dataset was augmented with x-flips during training [default: look up]', type=bool, metavar='BOOL')
-@click.option('--gpus', help='Number of GPUs to use', type=int, default=1, metavar='INT', show_default=True)
-@click.option('--verbose', help='Print optional information', type=bool, default=True, metavar='BOOL', show_default=True)
-
+@click.option(
+    "network_pkl",
+    "--network",
+    help="Network pickle filename or URL",
+    metavar="PATH",
+    required=True,
+)
+@click.option(
+    "--metrics",
+    help='Comma-separated list or "none"',
+    type=CommaSeparatedList(),
+    default="fid50k_full",
+    show_default=True,
+)
+@click.option(
+    "--data",
+    help="Dataset to evaluate metrics against (directory or zip) [default: same as training data]",
+    metavar="PATH",
+)
+@click.option(
+    "--test_data",
+    help="Dataset to evaluate metrics against (directory or zip) [default: same as training data]",
+    metavar="PATH",
+)
+@click.option(
+    "--mirror",
+    help="Whether the dataset was augmented with x-flips during training [default: look up]",
+    type=bool,
+    metavar="BOOL",
+)
+@click.option(
+    "--gpus",
+    help="Number of GPUs to use",
+    type=int,
+    default=1,
+    metavar="INT",
+    show_default=True,
+)
+@click.option(
+    "--verbose",
+    help="Print optional information",
+    type=bool,
+    default=True,
+    metavar="BOOL",
+    show_default=True,
+)
 def calc_metrics(ctx, network_pkl, metrics, data, test_data, mirror, gpus, verbose):
     """Calculate quality metrics for previous training run or pretrained network pickle.
 
@@ -134,69 +195,87 @@ def calc_metrics(ctx, network_pkl, metrics, data, test_data, mirror, gpus, verbo
     dnnlib.util.Logger(should_flush=True)
 
     # Validate arguments.
-    args = dnnlib.EasyDict(metrics=metrics, num_gpus=gpus, network_pkl=network_pkl, verbose=verbose)
+    args = dnnlib.EasyDict(
+        metrics=metrics, num_gpus=gpus, network_pkl=network_pkl, verbose=verbose
+    )
     if not all(metric_main.is_valid_metric(metric) for metric in args.metrics):
-        ctx.fail('\n'.join(['--metrics can only contain the following values:'] + metric_main.list_valid_metrics()))
+        ctx.fail(
+            "\n".join(
+                ["--metrics can only contain the following values:"]
+                + metric_main.list_valid_metrics()
+            )
+        )
     if not args.num_gpus >= 1:
-        ctx.fail('--gpus must be at least 1')
+        ctx.fail("--gpus must be at least 1")
 
     # Load network.
-    if not dnnlib.util.is_url(network_pkl, allow_file_urls=True) and not os.path.isfile(network_pkl):
-        ctx.fail('--network must point to a file or URL')
+    if not dnnlib.util.is_url(network_pkl, allow_file_urls=True) and not os.path.isfile(
+        network_pkl
+    ):
+        ctx.fail("--network must point to a file or URL")
     if args.verbose:
         print(f'Loading network from "{network_pkl}"...')
     with dnnlib.util.open_url(network_pkl, verbose=args.verbose) as f:
         network_dict = legacy.load_network_pkl(f)
-        args.G = network_dict['G_ema'] # subclass of torch.nn.Module
-        args.D = network_dict['D']
+        args.G = network_dict["G_ema"]  # subclass of torch.nn.Module
+        args.D = network_dict["D"]
 
     # Initialize dataset options.
     if data is not None:
-        args.dataset_kwargs = dnnlib.EasyDict(class_name='training.dataset.ImageFolderDataset', path=data, use_clip=True)
-        args.testset_kwargs = dnnlib.EasyDict(class_name='training.dataset.ImageFolderDataset', path=test_data, use_clip=True)
-    elif network_dict['training_set_kwargs'] is not None:
-        args.dataset_kwargs = dnnlib.EasyDict(network_dict['training_set_kwargs'])
+        args.dataset_kwargs = dnnlib.EasyDict(
+            class_name="training.dataset.ImageFolderDataset", path=data, use_clip=True
+        )
+        args.testset_kwargs = dnnlib.EasyDict(
+            class_name="training.dataset.ImageFolderDataset",
+            path=test_data,
+            use_clip=True,
+        )
+    elif network_dict["training_set_kwargs"] is not None:
+        args.dataset_kwargs = dnnlib.EasyDict(network_dict["training_set_kwargs"])
         try:
-            args.testset_kwargs = dnnlib.EasyDict(network_dict['testing_set_kwargs'])
+            args.testset_kwargs = dnnlib.EasyDict(network_dict["testing_set_kwargs"])
         except:
-            args.testset_kwargs = dnnlib.EasyDict(network_dict['training_set_kwargs'])
+            args.testset_kwargs = dnnlib.EasyDict(network_dict["training_set_kwargs"])
     else:
-        ctx.fail('Could not look up dataset options; please specify --data')
+        ctx.fail("Could not look up dataset options; please specify --data")
 
     # Finalize dataset options.
     args.dataset_kwargs.resolution = args.G.img_resolution
-    args.dataset_kwargs.use_labels = (args.G.c_dim != 0)
+    args.dataset_kwargs.use_labels = args.G.c_dim != 0
     args.testset_kwargs.resolution = args.G.img_resolution
-    args.testset_kwargs.use_labels = (args.G.c_dim != 0)
+    args.testset_kwargs.use_labels = args.G.c_dim != 0
     if mirror is not None:
         args.dataset_kwargs.xflip = mirror
         args.testset_kwargs.xflip = mirror
 
     # Print dataset options.
     if args.verbose:
-        print('Dataset options:')
+        print("Dataset options:")
         print(json.dumps(args.dataset_kwargs, indent=2))
 
     # Locate run dir.
     args.run_dir = None
     if os.path.isfile(network_pkl):
         pkl_dir = os.path.dirname(network_pkl)
-        if os.path.isfile(os.path.join(pkl_dir, 'training_options.json')):
+        if os.path.isfile(os.path.join(pkl_dir, "training_options.json")):
             args.run_dir = pkl_dir
 
     # Launch processes.
     if args.verbose:
-        print('Launching processes...')
-    torch.multiprocessing.set_start_method('spawn')
+        print("Launching processes...")
+    torch.multiprocessing.set_start_method("spawn")
     with tempfile.TemporaryDirectory() as temp_dir:
         if args.num_gpus == 1:
             subprocess_fn(rank=0, args=args, temp_dir=temp_dir)
         else:
-            torch.multiprocessing.spawn(fn=subprocess_fn, args=(args, temp_dir), nprocs=args.num_gpus)
+            torch.multiprocessing.spawn(
+                fn=subprocess_fn, args=(args, temp_dir), nprocs=args.num_gpus
+            )
 
-#----------------------------------------------------------------------------
+
+# ----------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    calc_metrics() # pylint: disable=no-value-for-parameter
+    calc_metrics()  # pylint: disable=no-value-for-parameter
 
-#----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------

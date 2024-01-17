@@ -6,18 +6,19 @@
 # Creation Date: Sun Feb  8 14:16:54 2015
 #
 # Authors: Ramakrishna Vedantam <vrama91@vt.edu> and Tsung-Yi Lin <tl483@cornell.edu>
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
+import pdb
 
 from .ciderD_scorer import CiderScorer
-import pdb
+
 
 class CiderD:
     """
     Main Class to compute the CIDEr metric
 
     """
+
     def __init__(self, n=4, sigma=6.0, df="corpus"):
         # set cider to sum over 1 to 4-grams
         self._n = n
@@ -39,15 +40,14 @@ class CiderD:
         tmp_cider_scorer = self.cider_scorer.copy_empty()
         tmp_cider_scorer.clear()
         for res_id in res:
-
-            hypo = res_id['caption']
-            ref = gts[res_id['image_id']]
+            hypo = res_id["caption"]
+            ref = gts[res_id["image_id"]]
 
             # Sanity check.
-            assert(type(hypo) is list)
-            assert(len(hypo) == 1)
-            assert(type(ref) is list)
-            assert(len(ref) > 0)
+            assert type(hypo) is list
+            assert len(hypo) == 1
+            assert type(ref) is list
+            assert len(ref) > 0
             tmp_cider_scorer += (hypo[0], ref)
 
         (score, scores) = tmp_cider_scorer.compute_score()

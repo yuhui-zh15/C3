@@ -1,23 +1,21 @@
-import os
-
 import argparse
-import torch
 import datetime
 import math
+import os
 import random
 
-from src import utils, builder
-
+import torch
 from dateutil import tz
 from omegaconf import OmegaConf
-from pytorch_lightning import seed_everything
 from pytorch_lightning import loggers as pl_loggers
-from pytorch_lightning.trainer import Trainer
+from pytorch_lightning import seed_everything
 from pytorch_lightning.callbacks import (
-    ModelCheckpoint,
     EarlyStopping,
     LearningRateMonitor,
+    ModelCheckpoint,
 )
+from pytorch_lightning.trainer import Trainer
+from src import builder, utils
 
 DATA_PREFIX = "."
 
@@ -62,7 +60,7 @@ def parse_configs():
         default=None,
         help="whether to normalize clip embeds or not at the very end",
     )
-    
+
     parser.add_argument(
         "--add_gaussian_noise",
         action="store_true",
@@ -83,8 +81,16 @@ def parse_configs():
     parser.add_argument("--checkpoint", type=str, default=None)
     parser.add_argument("--output_dir", type=str, default="output")
 
-    parser.add_argument("--val_eval", action="store_true", help='whether to run evaluation metrics over the validation set after every training epoch')
-    parser.add_argument("--cross_modal_val", action="store_true", help='whether to run cross-modal evaluation over validation after every training epoch')
+    parser.add_argument(
+        "--val_eval",
+        action="store_true",
+        help="whether to run evaluation metrics over the validation set after every training epoch",
+    )
+    parser.add_argument(
+        "--cross_modal_val",
+        action="store_true",
+        help="whether to run cross-modal evaluation over validation after every training epoch",
+    )
 
     parser.add_argument("--subsample_val_test", action="store_true")
 
@@ -120,25 +126,25 @@ def parse_configs():
     cfg.data.remove_mean = args.remove_mean
     if args.remove_mean:
         cfg.experiment_name += f"_remove_mean"
-        
+
     cfg.data.add_gaussian_noise = args.add_gaussian_noise
     if args.add_gaussian_noise:
         cfg.experiment_name += f"_add_gaussian_noise_level_{round(args.noise_level, 5)}"
-    
+
     cfg.model.re_normalize_prefix = args.re_normalize_prefix
     if not args.re_normalize_prefix:
         cfg.experiment_name += "_not_renormed"
-    
+
     cfg.model.subsample_val_test = args.subsample_val_test
     if args.subsample_val_test:
         cfg.experiment_name += "_subsample_val_test"
-    
+
     cfg.experiment_name += f"_{cfg.train.optimizer.name}"
 
     if args.lr:
         cfg.lightning.trainer.lr = args.lr
         cfg.experiment_name += f"_lr_{args.lr}"
-        
+
     cfg.test_split = args.test_split
     cfg.noise_level = args.noise_level
 
@@ -161,9 +167,8 @@ def parse_configs():
         cfg.checkpoint = cfg.model.pretrain_ckpt
     if cfg.checkpoint and "noise" in cfg.checkpoint:
         cfg.experiment_name += f"_add_noise_in_pretrain"
-        
+
     cfg.experiment_name += f"_seed_{args.random_seed}"
-        
 
     return cfg, args
 
@@ -243,12 +248,15 @@ def setup(cfg, test_split=False):
     model = builder.build_lightning_model(cfg)
 
     # setup pytorch-lightning trainer
-    lr = cfg.lightning.trainer.pop('lr')
+    lr = cfg.lightning.trainer.pop("lr")
     # trainer_args = argparse.Namespace(**cfg.lightning.trainer)
     trainer = Trainer(
-        **cfg.lightning.trainer, deterministic=False, callbacks=callbacks, logger=loggers
+        **cfg.lightning.trainer,
+        deterministic=False,
+        callbacks=callbacks,
+        logger=loggers,
     )  # note: determinstic is set to True in eval/predict.py with warn_only=True
-    
+
     cfg.lightning.trainer.lr = lr
 
     return trainer, model, dm, checkpoint_callback

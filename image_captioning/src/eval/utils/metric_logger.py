@@ -1,7 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
-from collections import defaultdict
-from collections import deque
 import os
+from collections import defaultdict, deque
 
 import torch
 
@@ -56,7 +55,7 @@ class MetricLogger(object):
                 self.params[param_group] = {}
             for param_name, param_value in group_dict.items():
                 # skipping parameters if they start with '_'
-                if param_name.startswith('_'):
+                if param_name.startswith("_"):
                     continue
                 if isinstance(param_value, torch.Tensor):
                     param_value = param_value.item()
@@ -69,7 +68,7 @@ class MetricLogger(object):
                 self.meters[metric_group] = defaultdict(SmoothedValue)
             for metric_name, metric_value in group_dict.items():
                 # skipping metrics if they start with '_'
-                if metric_name.startswith('_'):
+                if metric_name.startswith("_"):
                     continue
                 if isinstance(metric_value, torch.Tensor):
                     metric_value = metric_value.item()
@@ -88,16 +87,21 @@ class MetricLogger(object):
             offset_p = 0
         offset = max(offset_m, offset_p)
 
-        for group_name, values in sorted(self.meters.items(),
-                                         key=lambda x: x[0]):
+        for group_name, values in sorted(self.meters.items(), key=lambda x: x[0]):
             loss_str = []
             for name, meter in values.items():
-                loss_str.append("{}: {:.4f} ({:.4f})".format(
-                    name, meter.median, meter.global_avg,
-                ))
+                loss_str.append(
+                    "{}: {:.4f} ({:.4f})".format(
+                        name,
+                        meter.median,
+                        meter.global_avg,
+                    )
+                )
             return_str.append(
                 "{:{offset}s} - {}".format(
-                    group_name, self.delimiter.join(loss_str), offset=offset,
+                    group_name,
+                    self.delimiter.join(loss_str),
+                    offset=offset,
                 ),
             )
         for group_name, values in self.params.items():
@@ -106,31 +110,31 @@ class MetricLogger(object):
                 loss_str.append("{}: {:.6f}".format(name, param))
             return_str.append(
                 "{:{offset}s} - {}".format(
-                    group_name, self.delimiter.join(loss_str), offset=offset,
+                    group_name,
+                    self.delimiter.join(loss_str),
+                    offset=offset,
                 ),
             )
         return "\n    ".join(return_str)
 
 
 class TensorboardLogger(MetricLogger):
-    def __init__(self,
-                 log_dir,
-                 delimiter='\t'):
+    def __init__(self, log_dir, delimiter="\t"):
         super(TensorboardLogger, self).__init__(delimiter)
         try:
             from tensorboardX import SummaryWriter
         except ImportError:
             raise ImportError(
-                'To use tensorboard please install tensorboardX '
-                '[ pip install tensorboardx ].'
+                "To use tensorboard please install tensorboardX "
+                "[ pip install tensorboardx ]."
             )
         self.philly_tb_logger = None
         self.philly_tb_logger_avg = None
         self.philly_tb_logger_med = None
         if is_main_process():
             self.tb_logger = SummaryWriter(log_dir)
-            self.tb_logger_avg = SummaryWriter(os.path.join(log_dir, 'avg'))
-            self.tb_logger_med = SummaryWriter(os.path.join(log_dir, 'med'))
+            self.tb_logger_avg = SummaryWriter(os.path.join(log_dir, "avg"))
+            self.tb_logger_med = SummaryWriter(os.path.join(log_dir, "med"))
         else:
             self.tb_logger = None
             self.tb_logger_avg = None
@@ -141,40 +145,48 @@ class TensorboardLogger(MetricLogger):
             for group_name, values in self.meters.items():
                 for name, meter in values.items():
                     self.tb_logger.add_scalar(
-                        '{}/{}'.format(group_name, name),
-                        meter.last_value, iteration,
+                        "{}/{}".format(group_name, name),
+                        meter.last_value,
+                        iteration,
                     )
                     self.tb_logger_avg.add_scalar(
-                        '{}/{}'.format(group_name, name),
-                        meter.avg, iteration,
+                        "{}/{}".format(group_name, name),
+                        meter.avg,
+                        iteration,
                     )
                     self.tb_logger_med.add_scalar(
-                        '{}/{}'.format(group_name, name),
-                        meter.median, iteration,
+                        "{}/{}".format(group_name, name),
+                        meter.median,
+                        iteration,
                     )
                     if self.philly_tb_logger:
                         self.philly_tb_logger.add_scalar(
-                            '{}/{}'.format(group_name, name),
-                            meter.last_value, iteration,
+                            "{}/{}".format(group_name, name),
+                            meter.last_value,
+                            iteration,
                         )
                         self.philly_tb_logger_avg.add_scalar(
-                            '{}/{}'.format(group_name, name),
-                            meter.avg, iteration,
+                            "{}/{}".format(group_name, name),
+                            meter.avg,
+                            iteration,
                         )
                         self.philly_tb_logger_med.add_scalar(
-                            '{}/{}'.format(group_name, name),
-                            meter.median, iteration,
+                            "{}/{}".format(group_name, name),
+                            meter.median,
+                            iteration,
                         )
             for group_name, values in self.params.items():
                 for name, param in values.items():
                     self.tb_logger.add_scalar(
-                        '{}/{}'.format(group_name, name),
-                        param, iteration,
+                        "{}/{}".format(group_name, name),
+                        param,
+                        iteration,
                     )
                     if self.philly_tb_logger:
                         self.philly_tb_logger.add_scalar(
-                            '{}/{}'.format(group_name, name),
-                            param, iteration,
+                            "{}/{}".format(group_name, name),
+                            param,
+                            iteration,
                         )
         return super(TensorboardLogger, self).get_logs(iteration)
 

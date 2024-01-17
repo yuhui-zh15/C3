@@ -1,36 +1,38 @@
-import os
-import numpy as np
-import zipfile
-import PIL.Image
 import json
-import torch
-import dnnlib
+import os
 import pickle
+import zipfile
 
-from compute_embed_mean import TEXT_EMBED_MEAN_LAFITE, IMAGE_EMBED_MEAN_LAFITE
+import dnnlib
+import numpy as np
+import PIL.Image
+import torch
+from compute_embed_mean import IMAGE_EMBED_MEAN_LAFITE, TEXT_EMBED_MEAN_LAFITE
 
 try:
     import pyspng
 except ImportError:
     pyspng = None
 
-#----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
+
 
 class Dataset(torch.utils.data.Dataset):
-    def __init__(self,
-        name,                   # Name of the dataset.
-        raw_shape,              # Shape of the raw image data (NCHW).
-        max_size    = None,     # Artificially limit the size of the dataset. None = no limit. Applied before xflip.
-        use_labels  = False,    # Enable conditioning labels? False = label dimension is zero.
-        use_clip    = False,
-        xflip       = False,    # Artificially double the size of the dataset via x-flips. Applied after max_size.
-        random_seed = 0,        # Random seed to use when applying max_size.
-        ratio = 1.0,  # how many text-image pairs will be used (0.5 means 0.5 image-text pairs + 0.5 fake pairs. Note if one want to use only 0.5 image-text pairs without using the rest images, set max_size)
+    def __init__(
+        self,
+        name,  # Name of the dataset.
+        raw_shape,  # Shape of the raw image data (NCHW).
+        max_size=None,  # Artificially limit the size of the dataset. None = no limit. Applied before xflip.
+        use_labels=False,  # Enable conditioning labels? False = label dimension is zero.
+        use_clip=False,
+        xflip=False,  # Artificially double the size of the dataset via x-flips. Applied after max_size.
+        random_seed=0,  # Random seed to use when applying max_size.
+        ratio=1.0,  # how many text-image pairs will be used (0.5 means 0.5 image-text pairs + 0.5 fake pairs. Note if one want to use only 0.5 image-text pairs without using the rest images, set max_size)
         remove_mean=False,
         add_noise=False,
         noise_level=0.75,
         add_lafite_noise=False,
-        norm_after_remove_mean=False
+        norm_after_remove_mean=False,
     ):
         self._name = name
         self._raw_shape = list(raw_shape)
@@ -41,22 +43,22 @@ class Dataset(torch.utils.data.Dataset):
         self._raw_clip_img_features = None
         self._label_shape = None
         self._ratio = ratio
-        
+
         self.add_noise = add_noise
         self.remove_mean = remove_mean
         self.noise_level = noise_level
         self.add_lafite_noise = add_lafite_noise
         self.norm_after_remove_mean = norm_after_remove_mean
-        
+
         # Load means gap
         self.text_embed_mean = None
         self.image_embed_mean = None
-        
+
         if remove_mean:
-            with open(TEXT_EMBED_MEAN_LAFITE, 'rb') as f:
+            with open(TEXT_EMBED_MEAN_LAFITE, "rb") as f:
                 self.text_embed_mean = pickle.load(f).numpy()
 
-            with open(IMAGE_EMBED_MEAN_LAFITE, 'rb') as f:
+            with open(IMAGE_EMBED_MEAN_LAFITE, "rb") as f:
                 self.image_embed_mean = pickle.load(f).numpy()
 
         # Apply max_size.
@@ -88,22 +90,25 @@ class Dataset(torch.utils.data.Dataset):
 
     def _get_clip_img_features(self):
         if self._raw_clip_img_features is None:
-            self._raw_clip_img_features = self._load_clip_img_features() if self._use_clip else None
+            self._raw_clip_img_features = (
+                self._load_clip_img_features() if self._use_clip else None
+            )
         return self._raw_clip_img_features
 
     def _get_clip_txt_features(self):
         if self._raw_clip_txt_features is None:
-            self._raw_clip_txt_features = self._load_clip_txt_features() if self._use_clip else None
+            self._raw_clip_txt_features = (
+                self._load_clip_txt_features() if self._use_clip else None
+            )
         return self._raw_clip_txt_features
 
-
-    def close(self): # to be overridden by subclass
+    def close(self):  # to be overridden by subclass
         pass
 
-    def _load_raw_image(self, raw_idx): # to be overridden by subclass
+    def _load_raw_image(self, raw_idx):  # to be overridden by subclass
         raise NotImplementedError
 
-    def _load_raw_labels(self): # to be overridden by subclass
+    def _load_raw_labels(self):  # to be overridden by subclass
         raise NotImplementedError
 
     def _load_clip_img_features(self):
@@ -130,46 +135,49 @@ class Dataset(torch.utils.data.Dataset):
         assert list(image.shape) == self.image_shape
         assert image.dtype == np.uint8
         if self._xflip[idx]:
-            assert image.ndim == 3 # CHW
+            assert image.ndim == 3  # CHW
             image = image[:, :, ::-1]
         if self._use_clip:
-            if idx % self._raw_shape[0] > self._ratio*self._raw_shape[0]:
-                noise = np.random.normal(0., 1., (512))
+            if idx % self._raw_shape[0] > self._ratio * self._raw_shape[0]:
+                noise = np.random.normal(0.0, 1.0, (512))
                 img_fts = self.get_img_features(idx)
-                img_fts = img_fts/np.linalg.norm(img_fts)
-                
+                img_fts = img_fts / np.linalg.norm(img_fts)
+
                 if self.remove_mean:
                     img_fts = img_fts - self.image_embed_mean
-                    
+
                     if self.norm_after_remove_mean:
-                        img_fts = img_fts/np.linalg.norm(img_fts)
-                
+                        img_fts = img_fts / np.linalg.norm(img_fts)
+
                 revised_img_fts = img_fts.copy()
-                
+
                 if self.add_lafite_noise:
-                    revised_img_fts = (1 - self.noise_level) *revised_img_fts \
-                    + self.noise_level*noise/np.linalg.norm(noise)
+                    revised_img_fts = (
+                        1 - self.noise_level
+                    ) * revised_img_fts + self.noise_level * noise / np.linalg.norm(
+                        noise
+                    )
                 elif self.add_noise:
-                    revised_img_fts = revised_img_fts + self.noise_level*noise
-                
-                revised_img_fts = revised_img_fts/np.linalg.norm(revised_img_fts)
-                
+                    revised_img_fts = revised_img_fts + self.noise_level * noise
+
+                revised_img_fts = revised_img_fts / np.linalg.norm(revised_img_fts)
+
                 return image.copy(), self.get_label(idx), img_fts, revised_img_fts
             else:
                 img_fts = self.get_img_features(idx)
-                img_fts = img_fts/np.linalg.norm(img_fts)
+                img_fts = img_fts / np.linalg.norm(img_fts)
                 txt_fts = self.get_txt_features(idx)
-                txt_fts = txt_fts/np.linalg.norm(txt_fts)
-                
+                txt_fts = txt_fts / np.linalg.norm(txt_fts)
+
                 if self.remove_mean:
                     img_fts = img_fts - self.image_embed_mean
-                    img_fts = img_fts/np.linalg.norm(img_fts)
-                    
+                    img_fts = img_fts / np.linalg.norm(img_fts)
+
                     txt_fts = txt_fts - self.text_embed_mean
-                    txt_fts = txt_fts/np.linalg.norm(txt_fts)
-                
+                    txt_fts = txt_fts / np.linalg.norm(txt_fts)
+
                 return image.copy(), self.get_label(idx), img_fts, txt_fts
-#             return image.copy(), self.get_label(idx), self.get_img_features(idx), self.get_txt_features(idx)
+        #             return image.copy(), self.get_label(idx), self.get_img_features(idx), self.get_txt_features(idx)
         else:
             return image.copy(), self.get_label(idx)
 
@@ -189,18 +197,17 @@ class Dataset(torch.utils.data.Dataset):
         try:
             txt_features = self._get_clip_txt_features()[self._raw_idx[idx]]
             index = np.random.randint(0, len(txt_features), ())
-            txt_features = txt_features[index] # randomly select one from the features
+            txt_features = txt_features[index]  # randomly select one from the features
             txt_features = np.array(txt_features)
             txt_features = txt_features.astype(np.float32)
             return txt_features.copy()
         except:
-            return np.random.normal(0., 1., (512))
-    
-    
+            return np.random.normal(0.0, 1.0, (512))
+
     def get_details(self, idx):
         d = dnnlib.EasyDict()
         d.raw_idx = int(self._raw_idx[idx])
-        d.xflip = (int(self._xflip[idx]) != 0)
+        d.xflip = int(self._xflip[idx]) != 0
         d.raw_label = self._get_raw_labels()[d.raw_idx].copy()
         return d
 
@@ -214,12 +221,12 @@ class Dataset(torch.utils.data.Dataset):
 
     @property
     def num_channels(self):
-        assert len(self.image_shape) == 3 # CHW
+        assert len(self.image_shape) == 3  # CHW
         return self.image_shape[0]
 
     @property
     def resolution(self):
-        assert len(self.image_shape) == 3 # CHW
+        assert len(self.image_shape) == 3  # CHW
         assert self.image_shape[1] == self.image_shape[2]
         return self.image_shape[1]
 
@@ -246,38 +253,51 @@ class Dataset(torch.utils.data.Dataset):
     def has_onehot_labels(self):
         return self._get_raw_labels().dtype == np.int64
 
-#----------------------------------------------------------------------------
+
+# ----------------------------------------------------------------------------
+
 
 class ImageFolderDataset(Dataset):
-    def __init__(self,
-        path,                   # Path to directory or zip.
-        resolution      = None, # Ensure specific resolution, None = highest available.
-        **super_kwargs,         # Additional arguments for the Dataset base class.
+    def __init__(
+        self,
+        path,  # Path to directory or zip.
+        resolution=None,  # Ensure specific resolution, None = highest available.
+        **super_kwargs,  # Additional arguments for the Dataset base class.
     ):
         self._path = path
         self._zipfile = None
 
         if os.path.isdir(self._path):
-            self._type = 'dir'
-            self._all_fnames = {os.path.relpath(os.path.join(root, fname), start=self._path) for root, _dirs, files in os.walk(self._path) for fname in files}
-            self.json_name = 'dataset.json'
+            self._type = "dir"
+            self._all_fnames = {
+                os.path.relpath(os.path.join(root, fname), start=self._path)
+                for root, _dirs, files in os.walk(self._path)
+                for fname in files
+            }
+            self.json_name = "dataset.json"
 
-        elif self._file_ext(self._path) == '.zip':
-            self._type = 'zip'
+        elif self._file_ext(self._path) == ".zip":
+            self._type = "zip"
             self._all_fnames = set(self._get_zipfile().namelist())
-            self.json_name = 'dataset.json'
+            self.json_name = "dataset.json"
         else:
-            raise IOError('Path must point to a directory or zip')
+            raise IOError("Path must point to a directory or zip")
 
         PIL.Image.init()
-        self._image_fnames = sorted(fname for fname in self._all_fnames if self._file_ext(fname) in PIL.Image.EXTENSION)
+        self._image_fnames = sorted(
+            fname
+            for fname in self._all_fnames
+            if self._file_ext(fname) in PIL.Image.EXTENSION
+        )
         if len(self._image_fnames) == 0:
-            raise IOError('No image files found in the specified path')
+            raise IOError("No image files found in the specified path")
 
         name = os.path.splitext(os.path.basename(self._path))[0]
         raw_shape = [len(self._image_fnames)] + list(self._load_raw_image(0).shape)
-        if resolution is not None and (raw_shape[2] != resolution or raw_shape[3] != resolution):
-            raise IOError('Image files do not match the specified resolution')
+        if resolution is not None and (
+            raw_shape[2] != resolution or raw_shape[3] != resolution
+        ):
+            raise IOError("Image files do not match the specified resolution")
         super().__init__(name=name, raw_shape=raw_shape, **super_kwargs)
 
     @staticmethod
@@ -285,16 +305,16 @@ class ImageFolderDataset(Dataset):
         return os.path.splitext(fname)[1].lower()
 
     def _get_zipfile(self):
-        assert self._type == 'zip'
+        assert self._type == "zip"
         if self._zipfile is None:
             self._zipfile = zipfile.ZipFile(self._path)
         return self._zipfile
 
     def _open_file(self, fname):
-        if self._type == 'dir':
-            return open(os.path.join(self._path, fname), 'rb')
-        if self._type == 'zip':
-            return self._get_zipfile().open(fname, 'r')
+        if self._type == "dir":
+            return open(os.path.join(self._path, fname), "rb")
+        if self._type == "zip":
+            return self._get_zipfile().open(fname, "r")
         return None
 
     def close(self):
@@ -310,13 +330,13 @@ class ImageFolderDataset(Dataset):
     def _load_raw_image(self, raw_idx):
         fname = self._image_fnames[raw_idx]
         with self._open_file(fname) as f:
-            if pyspng is not None and self._file_ext(fname) == '.png':
+            if pyspng is not None and self._file_ext(fname) == ".png":
                 image = pyspng.load(f.read())
             else:
                 image = np.array(PIL.Image.open(f))
         if image.ndim == 2:
-            image = image[:, :, np.newaxis] # HW => HWC
-        image = image.transpose(2, 0, 1) # HWC => CHW
+            image = image[:, :, np.newaxis]  # HW => HWC
+        image = image.transpose(2, 0, 1)  # HWC => CHW
         return image
 
     def _load_raw_labels(self):
@@ -324,11 +344,11 @@ class ImageFolderDataset(Dataset):
         if fname not in self._all_fnames:
             return None
         with self._open_file(fname) as f:
-            labels = json.load(f)['labels']
+            labels = json.load(f)["labels"]
         if labels is None:
             return None
         labels = dict(labels)
-        labels = [labels[fname.replace('\\', '/')] for fname in self._image_fnames]
+        labels = [labels[fname.replace("\\", "/")] for fname in self._image_fnames]
         labels = np.array(labels)
         labels = labels.astype({1: np.int64, 2: np.float32}[labels.ndim])
         return labels
@@ -338,11 +358,13 @@ class ImageFolderDataset(Dataset):
         if fname not in self._all_fnames:
             return None
         with self._open_file(fname) as f:
-            clip_features = json.load(f)['clip_img_features']
+            clip_features = json.load(f)["clip_img_features"]
         if clip_features is None:
             return None
         clip_features = dict(clip_features)
-        clip_features = [clip_features[fname.replace('\\', '/')] for fname in self._image_fnames]
+        clip_features = [
+            clip_features[fname.replace("\\", "/")] for fname in self._image_fnames
+        ]
         clip_features = np.array(clip_features)
         clip_features = clip_features.astype(np.float32)
         return clip_features
@@ -352,10 +374,14 @@ class ImageFolderDataset(Dataset):
         if fname not in self._all_fnames:
             return None
         with self._open_file(fname) as f:
-            clip_features = json.load(f)['clip_txt_features']
+            clip_features = json.load(f)["clip_txt_features"]
         if clip_features is None:
             return None
         clip_features = dict(clip_features)
-        clip_features = [clip_features[fname.replace('\\', '/')] for fname in self._image_fnames]
+        clip_features = [
+            clip_features[fname.replace("\\", "/")] for fname in self._image_fnames
+        ]
         return clip_features
-#----------------------------------------------------------------------------
+
+
+# ----------------------------------------------------------------------------
