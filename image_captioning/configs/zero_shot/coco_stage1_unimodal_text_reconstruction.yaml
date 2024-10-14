@@ -7,10 +7,10 @@ lightning:
     lr: 2e-5
     precision: 16
   checkpoint_callback:
-    monitor: 'val/meteor'
+    monitor: 'val_loss_epoch'
     dirpath: './data/coco/ckpt'
     save_last: true
-    mode: 'max'
+    mode: 'min'
     save_top_k: 1
   logger:
     logger_type: 'WandbLogger'
