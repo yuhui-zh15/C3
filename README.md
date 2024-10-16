@@ -32,6 +32,8 @@ Building cross-modal applications is challenging due to limited paired multi-mod
 
 - Reproduce image generation results [here](image_generation/README.md).
 
+- Reproduce ImageBind results [imagebind branch](https://github.com/yuhui-zh15/C3/tree/imagebind).
+
 ## 🎯 Citation
 
 If you use this repo in your research, please cite it as follows:
