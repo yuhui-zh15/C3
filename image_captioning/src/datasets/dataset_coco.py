@@ -11,8 +11,6 @@ import torch
 from omegaconf import OmegaConf
 from transformers import GPT2Tokenizer
 
-os.environ["TOKENIZERS_PARALLELISM"] = "false"
-
 
 class ClipCocoDataset(pl.LightningDataModule):
     def __init__(self, cfg, split="train"):
