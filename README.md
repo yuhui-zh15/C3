@@ -2,7 +2,11 @@
 
 ## Usage
 
-Train: 
+### Data Processing: 
+
+`imagebind.ipynb`
+
+### Train: 
 
 `python train.py --method="c1" --file_name="data/data_image_coco_imagebind.pkl"`
 
@@ -22,10 +26,10 @@ Train:
 
 > When running CLIP, change "self.proj = nn.Linear(1024, self.decoder.config.hidden_size).to(device)" in model.py from 1024 to 512 (CLIP VIT-B/32)
 
-Eval: 
+### Eval: 
 
 `utils.ipynb`
 
-## Working Directory
+## Processed Data
 
-`/pasteur/u/yuhuiz/iccv_c3`
+https://drive.google.com/drive/folders/1M9rXIKHPz58YJJ1l-c9zx-tfeCLXLti7?usp=sharing
