@@ -4,6 +4,4 @@ python3 run.py \
     --add_gaussian_noise \
     --train \
     --test \
-    --cross_modal_val \
-    --val_eval \
     --re_normalize_prefix
