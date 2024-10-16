@@ -4,7 +4,7 @@ import pandas as pd
 import pytorch_lightning as pl
 from omegaconf import OmegaConf
 from pytorch_lightning.loggers import WandbLogger
-from transformers import AutoTokenizer
+from transformers import GPT2Tokenizer
 
 from .. import builder
 from ..enums import Modality
@@ -22,8 +22,7 @@ from ..utils import (
 class ClipCaptionLightningModel(pl.LightningModule):
     def __init__(self, cfg):
         super().__init__()
-        self.tokenizer = AutoTokenizer.from_pretrained(cfg.decoder.model)
-        # self.tokenizer.pad_token = self.tokenizer.eos_token
+        self.tokenizer = GPT2Tokenizer.from_pretrained(cfg.decoder.model)
 
         self.model = Decoder(cfg)
         self.loss = builder.build_loss(cfg)

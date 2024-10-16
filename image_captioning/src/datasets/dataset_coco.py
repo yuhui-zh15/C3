@@ -9,7 +9,7 @@ from typing import Tuple
 import pytorch_lightning as pl
 import torch
 from omegaconf import OmegaConf
-from transformers import AutoTokenizer
+from transformers import GPT2Tokenizer
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -57,7 +57,7 @@ class ClipCocoDataset(pl.LightningDataModule):
                     all_len,
                 ) = pickle.load(f)
         else:
-            self.tokenizer = AutoTokenizer.from_pretrained(cfg.decoder.model)
+            self.tokenizer = GPT2Tokenizer.from_pretrained(cfg.decoder.model)
             # {caption_id: image_id}
             print("=> Saving caption_id_2_image_id dict")
             self.caption_id_2_image_id = {
