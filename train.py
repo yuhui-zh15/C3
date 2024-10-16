@@ -4,6 +4,7 @@ import random
 import time
 
 import torch
+import torch.nn.functional as F
 import numpy as np
 import pandas as pd
 from tqdm import tqdm, trange
@@ -45,8 +46,15 @@ def train(model, train_data_, optimizer, avg, method, noise_scale, batch_size=32
         ).to(device)
         if method in ["c21", "c3"]:
             input_embs = input_embs - avg[input_key]
-        if method in ["c22", "c3"]:
+        if method in ["c22", "c22_modified", "c3"]:
             gaussian_noise = torch.randn(input_embs.shape).to(device)
+            if method in ["c22_modified"]:
+                modality_gap = avg["x_embed"] - avg["y_embed"]
+                normed_gap = F.normalize(modality_gap, p=2, dim=-1)
+                proj_length = gaussian_noise @ normed_gap.view(-1, 1)
+                proj_vec = proj_length * normed_gap
+                gaussian_noise = gaussian_noise - proj_vec
+                # print(modality_gap.shape, normed_gap.shape, proj_length.shape, proj_vec.shape, gaussian_noise.shape)
             input_embs = input_embs + gaussian_noise * noise_scale
         loss, _ = model(input_embs, texts)
 
@@ -108,7 +116,7 @@ def evaluate_gen(model, valid_data, avg, method, input_key="y_embed"):
 
 @click.command()
 @click.option("--training_percentage", type=float, default=1.0)
-@click.option("--n_epochs", type=int, default=50)
+@click.option("--n_epochs", type=int, default=20)
 @click.option("--batch_size", type=int, default=64)
 @click.option("--lr", type=float, default=0.001)
 @click.option("--eval_freq", type=int, default=1)
@@ -129,7 +137,7 @@ def main(
 
     cur_time = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
 
-    train_data, valid_data, avg = load_data(file_name)
+    train_data, valid_data, avg = load_data(f"data/{file_name}")
     print(f"Length of train data: {len(train_data)}, valid data: {len(valid_data)}")
 
     model = ClipCap()

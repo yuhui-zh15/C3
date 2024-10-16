@@ -93,7 +93,7 @@ class ClipCap(nn.Module):
         self.tokenizer_decoder = AutoTokenizer.from_pretrained("gpt2")
         self.tokenizer_decoder.pad_token = self.tokenizer_decoder.eos_token
         self.decoder = AutoModelForCausalLM.from_pretrained("gpt2").to(device)
-        self.proj = nn.Linear(1024, self.decoder.config.hidden_size).to(device)
+        self.proj = nn.Linear(512, self.decoder.config.hidden_size).to(device)
 
     def forward(self, input_embs: torch.Tensor, texts: List[str]):
         output_prefix = self.proj(input_embs)
